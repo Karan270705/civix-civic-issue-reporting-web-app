@@ -1,6 +1,11 @@
 Options -Indexes
 RewriteEngine On
 
+# ── Pass Authorization header to PHP ──────────────────────────────────────────
+# Apache strips it by default under CGI/FastCGI setups (common in XAMPP).
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 # Route everything through index.php except actual files/dirs
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

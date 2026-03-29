@@ -50,7 +50,17 @@ function verifyToken(string $token): ?array {
 // ── Extract from request ──────────────────────────────────────────────────────
 
 function getAuthPayload(): ?array {
-    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    // Try multiple sources — Apache/XAMPP strips Authorization under CGI/FastCGI
+    $header = $_SERVER['HTTP_AUTHORIZATION']
+           ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+           ?? '';
+
+    // Fallback: apache_request_headers() works on Apache mod_php
+    if (!$header && function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        $header  = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+    }
+
     if (str_starts_with($header, 'Bearer ')) {
         $token = substr($header, 7);
         return verifyToken($token);

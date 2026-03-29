@@ -122,3 +122,21 @@ CREATE TABLE IF NOT EXISTS comments (
     CONSTRAINT fk_cmt_issue FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE,
     CONSTRAINT fk_cmt_user  FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- SOLUTION VOTES
+-- Per-user vote tracking for solutions (prevents duplicates).
+-- solutions.upvotes stores the cached net count.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS solution_votes (
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    solution_id INT UNSIGNED NOT NULL,
+    user_id     INT UNSIGNED NOT NULL,
+    created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_sol_vote (solution_id, user_id),   -- one vote per user per solution
+    CONSTRAINT fk_svote_solution FOREIGN KEY (solution_id) REFERENCES solutions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_svote_user     FOREIGN KEY (user_id)     REFERENCES users(id)     ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
