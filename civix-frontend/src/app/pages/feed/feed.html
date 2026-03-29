@@ -1,0 +1,91 @@
+<div class="feed-page">
+
+  <!-- Page header -->
+  <div class="feed-header">
+    <div class="container">
+      <div class="feed-header-inner">
+        <div>
+          <h1 class="feed-title">Issue Feed</h1>
+          <p class="feed-subtitle">Browse and validate civic issues reported by your community.</p>
+        </div>
+        <a routerLink="/issues/new" class="btn btn-primary btn-md" id="report-issue-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Report Issue
+        </a>
+      </div>
+
+      <!-- Category chips -->
+      <div class="category-chips" role="group" aria-label="Filter by category">
+        @for (cat of categories; track cat.value) {
+          <button
+            class="chip"
+            [class.active]="filter().category === cat.value"
+            (click)="setActiveCategory(cat.value)"
+            [id]="'chip-' + cat.value">
+            {{ cat.icon }} {{ cat.label }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="container filter-bar-inner">
+      <span class="result-count">
+        @if (loading()) { Loading… } @else { {{ filteredIssues().length }} issue{{ filteredIssues().length !== 1 ? 's' : '' }} }
+      </span>
+
+      <div class="filter-selects">
+        <select id="filter-status" [value]="filter().status" (change)="setStatus($any($event.target).value)">
+          @for (s of statuses; track s.value) {
+            <option [value]="s.value">{{ s.label }}</option>
+          }
+        </select>
+
+        <select id="filter-sort" [value]="filter().sort" (change)="setSort($any($event.target).value)">
+          <option value="newest">🕐 Newest first</option>
+          <option value="most_voted">🔥 Most voted</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="container feed-content">
+
+    @if (loading()) {
+      <!-- Skeleton loader -->
+      <div class="issue-grid">
+        @for (n of [1,2,3,4,5,6]; track n) {
+          <div class="skeleton-card">
+            <div class="skeleton-img"></div>
+            <div class="skeleton-body">
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line medium"></div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (filteredIssues().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3>No issues found</h3>
+        <p>Try a different filter, or be the first to report an issue in this category.</p>
+        <a routerLink="/issues/new" class="btn btn-primary btn-md">Report an Issue</a>
+      </div>
+    } @else {
+      <div class="issue-grid">
+        @for (issue of filteredIssues(); track trackById($index, issue)) {
+          <app-issue-card
+            [issue]="issue"
+            (vote)="onVote($event)">
+          </app-issue-card>
+        }
+      </div>
+    }
+
+  </div>
+</div>

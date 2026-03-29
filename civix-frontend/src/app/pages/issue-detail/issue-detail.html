@@ -1,0 +1,339 @@
+<!-- Loading skeleton -->
+@if (loading()) {
+  <div class="detail-page">
+    <div class="container detail-container">
+      <div class="skeleton-header"></div>
+      <div class="skeleton-image"></div>
+      <div class="skeleton-lines">
+        <div class="sk-line"></div>
+        <div class="sk-line short"></div>
+        <div class="sk-line"></div>
+        <div class="sk-line medium"></div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Not found -->
+@if (!loading() && notFound()) {
+  <div class="detail-page not-found-page">
+    <div class="not-found-card">
+      <div class="not-found-icon">🔍</div>
+      <h2>Issue Not Found</h2>
+      <p>This issue doesn't exist or may have been removed.</p>
+      <a routerLink="/feed" class="btn btn-primary btn-md">← Back to Feed</a>
+    </div>
+  </div>
+}
+
+<!-- Issue detail -->
+@if (!loading() && !notFound() && issue(); as issue) {
+<div class="detail-page">
+  <div class="container detail-container">
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <a routerLink="/feed">Browse Issues</a>
+      <span class="bc-sep">/</span>
+      <span>{{ categoryLabel(issue.category) }}</span>
+    </nav>
+
+    <!-- Main layout: content + sidebar -->
+    <div class="detail-layout">
+
+      <!-- ═══ LEFT: Main Content ═══ -->
+      <main class="detail-main">
+
+        <!-- ① Issue Header -->
+        <section class="issue-header-card">
+          <div class="issue-header-top">
+            <div class="issue-badges">
+              <span class="category-pill">{{ categoryIcon(issue.category) }} {{ categoryLabel(issue.category) }}</span>
+              <app-status-badge [status]="issue.status"></app-status-badge>
+            </div>
+          </div>
+
+          <h1 class="issue-title">{{ issue.title }}</h1>
+
+          <div class="issue-meta-row">
+            <div class="meta-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              {{ issue.location }}
+            </div>
+            <div class="meta-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {{ timeAgo(issue.created_at) }}
+            </div>
+            <div class="meta-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <strong>{{ issue.username ?? 'Anonymous' }}</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- ② Media -->
+        @if (issue.image_url) {
+          <section class="media-section">
+            <img [src]="issue.image_url" [alt]="issue.title" class="issue-image" />
+          </section>
+        }
+
+        <!-- ③ Description -->
+        <section class="description-card">
+          <h2 class="section-label">About this issue</h2>
+          <p class="issue-description">{{ issue.description }}</p>
+        </section>
+
+        <!-- ④ Voting -->
+        <section class="voting-card">
+          <p class="voting-label">Is this a real civic problem?</p>
+          <div class="voting-row">
+            <button
+              class="vote-btn-lg up"
+              [class.active]="issue.user_vote === 'up'"
+              [disabled]="voteLoading()"
+              (click)="vote('up')"
+              id="detail-upvote">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 19V5"/><polyline points="5 12 12 5 19 12"/></svg>
+              Confirm Issue
+            </button>
+
+            <div class="vote-score" [class.positive]="issue.vote_count > 0" [class.negative]="issue.vote_count < 0">
+              {{ issue.vote_count > 0 ? '+' : '' }}{{ issue.vote_count }}
+              <span>votes</span>
+            </div>
+
+            <button
+              class="vote-btn-lg down"
+              [class.active]="issue.user_vote === 'down'"
+              [disabled]="voteLoading()"
+              (click)="vote('down')"
+              id="detail-downvote">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14"/><polyline points="19 12 12 19 5 12"/></svg>
+              Mark Spam
+            </button>
+          </div>
+        </section>
+
+        <!-- ⑤ Solutions -->
+        <section class="solutions-section" id="solutions">
+          <div class="solutions-header">
+            <h2 class="solutions-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Proposed Solutions
+              <span class="solutions-count">{{ solutions().length }}</span>
+            </h2>
+          </div>
+
+          <!-- Add solution -->
+          @if (authService.currentUser) {
+            <div class="add-solution-card">
+              <div class="add-sol-avatar">{{ getInitial(authService.currentUser!.username) }}</div>
+              <div class="add-sol-right">
+                <div class="field-label-row">
+                  <span class="add-sol-label">Propose a solution</span>
+                  <span class="char-count" [class.warn]="solutionCharCount > 900">{{ solutionCharCount }}/1000</span>
+                </div>
+                <textarea
+                  [formControl]="$any(solutionForm.get('text'))"
+                  rows="3"
+                  placeholder="Describe a concrete, actionable solution. Who should be contacted? What should be done?"
+                  class="sol-textarea"
+                  [class.is-error]="solutionTextError"
+                ></textarea>
+                @if (solutionTextError) { <span class="field-error">{{ solutionTextError }}</span> }
+                <div class="add-sol-actions">
+                  <button class="btn btn-primary btn-sm" (click)="submitSolution()" [disabled]="solutionLoading()" id="submit-solution-btn">
+                    @if (solutionLoading()) { <span class="btn-spinner"></span> Posting… } @else { Post Solution }
+                  </button>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="auth-prompt">
+              <a routerLink="/login" class="btn btn-primary btn-sm">Log in to propose a solution</a>
+            </div>
+          }
+
+          <!-- Solution list -->
+          @if (sortedSolutions().length === 0) {
+            <div class="solutions-empty">
+              <p>No solutions yet. Be the first to propose one!</p>
+            </div>
+          } @else {
+            <div class="solution-cards">
+              @for (sol of sortedSolutions(); track sol.id) {
+                <div class="solution-card" [class.accepted-card]="sol.is_accepted" [id]="'sol-' + sol.id">
+                  @if (sol.is_accepted) {
+                    <div class="accepted-banner">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      Accepted Solution
+                    </div>
+                  }
+                  <div class="sol-card-body">
+                    <div class="sol-avatar">{{ getInitial(sol.username ?? 'A') }}</div>
+                    <div class="sol-content">
+                      <div class="sol-author-row">
+                        <strong class="sol-author">{{ sol.username }}</strong>
+                        <span class="sol-time">{{ timeAgo(sol.created_at) }}</span>
+                      </div>
+                      <p class="sol-text">{{ sol.solution_text }}</p>
+                      <div class="sol-actions">
+                        <button
+                          class="sol-vote-btn"
+                          [class.voted]="sol.user_voted"
+                          [disabled]="sol.user_voted || solutionVoting() === sol.id"
+                          (click)="voteSolution(sol.id)"
+                          [id]="'sol-vote-' + sol.id">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 19V5"/><polyline points="5 12 12 5 19 12"/></svg>
+                          {{ sol.upvotes }}
+                        </button>
+                        @if (isIssueOwner() && !sol.is_accepted) {
+                          <button class="sol-accept-btn" (click)="acceptSolution(sol.id)" [id]="'accept-' + sol.id">
+                            ✓ Mark as Accepted
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </section>
+
+        <!-- ⑥ Discussion -->
+        <section class="comments-section" id="discussion">
+          <div class="comments-header">
+            <h2 class="comments-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Discussion
+              <span class="solutions-count">{{ comments().length }}</span>
+            </h2>
+          </div>
+
+          <!-- Add comment -->
+          @if (authService.currentUser) {
+            <div class="add-comment-card">
+              <div class="add-sol-avatar">{{ getInitial(authService.currentUser!.username) }}</div>
+              <div class="add-comment-right">
+                <div class="field-label-row">
+                  <span class="add-sol-label">Add to the discussion</span>
+                  <span class="char-count">{{ commentCharCount }}/500</span>
+                </div>
+                <textarea
+                  [formControl]="$any(commentForm.get('text'))"
+                  rows="2"
+                  placeholder="Share your thoughts, experiences, or relevant information…"
+                  class="sol-textarea"
+                ></textarea>
+                <div class="add-sol-actions">
+                  <button class="btn btn-secondary btn-sm" (click)="submitComment()" [disabled]="commentLoading()" id="submit-comment-btn">
+                    @if (commentLoading()) { <span class="btn-spinner"></span> Posting… } @else { Post Comment }
+                  </button>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="auth-prompt">
+              <a routerLink="/login" class="btn btn-secondary btn-sm">Log in to join the discussion</a>
+            </div>
+          }
+
+          <!-- Comments list -->
+          @if (comments().length === 0) {
+            <div class="solutions-empty">
+              <p>No comments yet. Start the discussion!</p>
+            </div>
+          } @else {
+            <div class="comment-list">
+              @for (c of comments(); track c.id) {
+                <div class="comment-item" [id]="'comment-' + c.id">
+                  <div class="comment-avatar">{{ getInitial(c.username) }}</div>
+                  <div class="comment-body">
+                    <div class="comment-author-row">
+                      <strong>{{ c.username }}</strong>
+                      <span class="comment-time">{{ timeAgo(c.created_at) }}</span>
+                    </div>
+                    <p class="comment-text">{{ c.text }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </section>
+
+      </main>
+
+      <!-- ═══ RIGHT: Sidebar ═══ -->
+      <aside class="detail-sidebar">
+
+        <!-- Status tracker -->
+        <div class="sidebar-card status-tracker">
+          <h3 class="sidebar-card-title">Resolution Status</h3>
+          <div class="status-steps">
+            @for (step of statusSteps; track step.key; let i = $index) {
+              <div class="status-step" [class.done]="i < statusIndex()" [class.current]="i === statusIndex()">
+                <div class="step-indicator">
+                  @if (i < statusIndex()) {
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  } @else if (i === statusIndex()) {
+                    <div class="step-dot-inner"></div>
+                  }
+                </div>
+                <div class="step-info">
+                  <span class="step-label">{{ step.label }}</span>
+                </div>
+              </div>
+              @if (i < statusSteps.length - 1) {
+                <div class="step-connector" [class.done]="i < statusIndex()"></div>
+              }
+            }
+          </div>
+        </div>
+
+        <!-- Quick stats -->
+        <div class="sidebar-card">
+          <h3 class="sidebar-card-title">Issue Stats</h3>
+          <div class="stats-list">
+            <div class="stat-row">
+              <span class="stat-key">Votes</span>
+              <span class="stat-val" [class.positive]="issue.vote_count > 0">{{ issue.vote_count }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-key">Solutions</span>
+              <span class="stat-val">{{ solutions().length }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-key">Comments</span>
+              <span class="stat-val">{{ comments().length }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-key">Accepted</span>
+              <span class="stat-val">{{ solutions().some(s => s.is_accepted) ? '✅ Yes' : 'None yet' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Location info -->
+        <div class="sidebar-card">
+          <h3 class="sidebar-card-title">Location</h3>
+          <p class="sidebar-location">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {{ issue.location }}
+          </p>
+          @if (issue.lat && issue.lng) {
+            <p class="sidebar-coords">{{ issue.lat }}, {{ issue.lng }}</p>
+          }
+        </div>
+
+        <!-- Report action -->
+        <a routerLink="/issues/new" class="btn btn-primary btn-md sidebar-cta">
+          + Report Another Issue
+        </a>
+
+      </aside>
+    </div>
+  </div>
+</div>
+}

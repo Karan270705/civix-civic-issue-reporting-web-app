@@ -1,0 +1,243 @@
+<!-- Success state — shown after submit -->
+@if (submitted()) {
+  <div class="success-page">
+    <div class="success-card">
+      <div class="success-icon">✅</div>
+      <h2>Issue Reported!</h2>
+      <p>Your issue has been posted. Redirecting you to the issue page…</p>
+      <div class="success-spinner"></div>
+    </div>
+  </div>
+}
+
+<!-- Form page -->
+@if (!submitted()) {
+<div class="create-page">
+
+  <!-- Top bar -->
+  <div class="create-topbar">
+    <div class="container topbar-inner">
+      <a routerLink="/feed" class="back-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Feed
+      </a>
+      <div class="topbar-meta">
+        <span class="topbar-user">
+          Reporting as
+          <strong>{{ authService.currentUser?.username }}</strong>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="container create-layout">
+
+    <!-- Left: form -->
+    <div class="create-main">
+      <div class="create-header">
+        <h1 class="create-title">Report a civic issue</h1>
+        <p class="create-subtitle">Describe the problem clearly so your community can validate and help resolve it.</p>
+      </div>
+
+      <form class="create-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+        <!-- Server error -->
+        @if (serverError()) {
+          <div class="form-error-banner" role="alert">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ serverError() }}
+          </div>
+        }
+
+        <!-- ── TITLE ── -->
+        <div class="form-field">
+          <div class="field-label-row">
+            <label class="field-label" for="issue-title">Issue Title <span class="required">*</span></label>
+            <span class="char-count" [class.warn]="titleChars > 100">{{ titleChars }}/120</span>
+          </div>
+          <input
+            id="issue-title"
+            type="text"
+            formControlName="title"
+            placeholder="e.g. Large pothole on MG Road near Central Mall"
+            [class.is-error]="titleError"
+          />
+          @if (titleError) { <span class="field-error">{{ titleError }}</span> }
+        </div>
+
+        <!-- ── CATEGORY ── -->
+        <div class="form-field">
+          <label class="field-label">Category <span class="required">*</span></label>
+          <div class="category-grid">
+            @for (cat of categories; track cat.value) {
+              <label
+                class="category-option"
+                [class.selected]="category.value === cat.value"
+                [for]="'cat-' + cat.value">
+                <input
+                  type="radio"
+                  [id]="'cat-' + cat.value"
+                  formControlName="category"
+                  [value]="cat.value"
+                />
+                <span class="cat-icon">{{ cat.icon }}</span>
+                <span class="cat-label">{{ cat.label }}</span>
+              </label>
+            }
+          </div>
+          @if (categoryError) { <span class="field-error">{{ categoryError }}</span> }
+        </div>
+
+        <!-- ── DESCRIPTION ── -->
+        <div class="form-field">
+          <div class="field-label-row">
+            <label class="field-label" for="issue-description">Description <span class="required">*</span></label>
+            <span class="char-count" [class.warn]="descChars > 900">{{ descChars }}/1000</span>
+          </div>
+          <textarea
+            id="issue-description"
+            formControlName="description"
+            rows="5"
+            placeholder="Describe the issue in detail. What is it? Where exactly? How long has it been there? What danger does it cause?"
+            [class.is-error]="descriptionError"
+          ></textarea>
+          @if (descriptionError) { <span class="field-error">{{ descriptionError }}</span> }
+        </div>
+
+        <!-- ── LOCATION ── -->
+        <div class="form-field">
+          <label class="field-label" for="issue-location">Location <span class="required">*</span></label>
+          <div class="location-wrap">
+            <input
+              id="issue-location"
+              type="text"
+              formControlName="location"
+              placeholder="e.g. MG Road, near Central Mall, Bangalore"
+              [class.is-error]="locationError"
+            />
+            <button
+              type="button"
+              class="detect-btn"
+              id="detect-location-btn"
+              (click)="detectLocation()"
+              [disabled]="locationLoading()"
+              title="Detect my current location">
+              @if (locationLoading()) {
+                <span class="mini-spinner"></span>
+              } @else {
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><path d="M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+              }
+            </button>
+          </div>
+          @if (locationError) { <span class="field-error">{{ locationError }}</span> }
+          @if (locationDetectError()) {
+            <span class="field-error">{{ locationDetectError() }}</span>
+          }
+          @if (form.value.lat) {
+            <span class="location-detected">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              GPS detected: {{ form.value.lat }}, {{ form.value.lng }}
+            </span>
+          }
+        </div>
+
+        <!-- ── IMAGE ── -->
+        <div class="form-field">
+          <label class="field-label">Photo <span class="optional">(optional)</span></label>
+
+          @if (!imagePreview()) {
+            <label class="image-drop-zone" for="image-upload" id="image-drop-label">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="drop-label">Click to upload a photo</span>
+              <span class="drop-hint">JPEG, PNG or WebP · max 5 MB</span>
+              <input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                (change)="onImageSelected($event)"
+              />
+            </label>
+          } @else {
+            <div class="image-preview-wrap">
+              <img [src]="imagePreview()" alt="Issue photo preview" class="image-preview" />
+              <button type="button" class="remove-image-btn" (click)="removeImage()" aria-label="Remove image">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          }
+        </div>
+
+        <!-- ── SUBMIT ── -->
+        <div class="form-actions">
+          <a routerLink="/feed" class="btn btn-secondary btn-md">Cancel</a>
+          <button
+            type="submit"
+            class="btn btn-primary btn-md submit-btn"
+            id="submit-issue-btn"
+            [disabled]="form.invalid || loading()">
+            @if (loading()) {
+              <span class="btn-spinner"></span>
+              Submitting…
+            } @else {
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Submit Issue
+            }
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Right: tips panel -->
+    <aside class="create-sidebar">
+      <div class="tips-card">
+        <h3 class="tips-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Tips for a good report
+        </h3>
+        <ul class="tips-list">
+          <li>
+            <span class="tip-icon">📍</span>
+            <div>
+              <strong>Be specific about location</strong>
+              <p>Include nearby landmarks, street names, or pin coordinates.</p>
+            </div>
+          </li>
+          <li>
+            <span class="tip-icon">📸</span>
+            <div>
+              <strong>Add a photo</strong>
+              <p>Issues with photos get 3× more votes and faster resolution.</p>
+            </div>
+          </li>
+          <li>
+            <span class="tip-icon">📝</span>
+            <div>
+              <strong>Describe the impact</strong>
+              <p>Mention the danger or inconvenience it causes to people.</p>
+            </div>
+          </li>
+          <li>
+            <span class="tip-icon">🔍</span>
+            <div>
+              <strong>Check for duplicates</strong>
+              <p>Search the feed first — upvoting an existing report is better than duplicating.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="status-info-card">
+        <h4>How your issue gets resolved</h4>
+        <div class="status-steps">
+          <div class="status-step"><span class="step-dot reported"></span><span>Reported — awaiting votes</span></div>
+          <div class="status-step"><span class="step-dot verified"></span><span>Verified — community confirmed</span></div>
+          <div class="status-step"><span class="step-dot in-progress"></span><span>In Progress — fix underway</span></div>
+          <div class="status-step"><span class="step-dot resolved"></span><span>Resolved — issue fixed!</span></div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+}

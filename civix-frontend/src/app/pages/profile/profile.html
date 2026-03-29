@@ -1,0 +1,255 @@
+@if (user$ | async; as user) {
+
+  <!-- Edit Modal -->
+  @if (editMode()) {
+    <div class="modal-backdrop" (click)="cancelEdit()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Edit Profile</h3>
+          <button class="modal-close" (click)="cancelEdit()" aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <form [formGroup]="editForm" (ngSubmit)="saveProfile()" class="modal-form">
+          @if (saveError()) {
+            <div class="modal-error">{{ saveError() }}</div>
+          }
+
+          <div class="modal-field">
+            <label for="profile-image-url">Profile Image URL <span class="optional">(optional)</span></label>
+            <input id="profile-image-url" type="url" formControlName="profile_image" placeholder="https://example.com/avatar.jpg" />
+            @if (editForm.value.profile_image) {
+              <div class="image-preview-mini">
+                <img [src]="editForm.value.profile_image" alt="Preview" onerror="this.style.display='none'" />
+              </div>
+            }
+          </div>
+
+          <div class="modal-field">
+            <div class="modal-field-label-row">
+              <label for="profile-bio">Bio</label>
+              <span class="char-count">{{ (editForm.value.bio ?? '').length }}/200</span>
+            </div>
+            <textarea id="profile-bio" formControlName="bio" rows="3" placeholder="Tell your community who you are..."></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary btn-md" (click)="cancelEdit()">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-md" [disabled]="saveLoading()">
+              @if (saveLoading()) { <span class="btn-spinner"></span> Saving… } @else { Save Changes }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <div class="profile-page">
+    <!-- ── Profile Header ── -->
+    <div class="profile-hero">
+      <div class="container profile-hero-inner">
+        <div class="avatar-wrap">
+          @if (user.profile_image) {
+            <img [src]="user.profile_image" [alt]="user.username" class="avatar-img" />
+          } @else {
+            <div class="avatar-placeholder">{{ getInitial(user.username) }}</div>
+          }
+        </div>
+
+        <div class="profile-meta">
+          <h1 class="profile-username">{{ user.username }}</h1>
+          <p class="profile-bio">{{ user.bio || 'No bio yet — click Edit to add one.' }}</p>
+          <p class="profile-since">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Member since {{ getMemberSince(user.created_at) }}
+          </p>
+        </div>
+
+        <div class="profile-actions">
+          <button class="btn btn-secondary btn-md" (click)="openEdit()" id="edit-profile-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit Profile
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="container profile-body">
+
+      @if (loading()) {
+        <div class="profile-loading">
+          <div class="loading-spinner"></div>
+          <p>Loading profile…</p>
+        </div>
+      } @else {
+
+      <!-- ── Stats Row ── -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="stat-value">{{ stats().issuesPosted }}</span>
+          <span class="stat-label">Issues Posted</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">{{ stats().solutionsGiven }}</span>
+          <span class="stat-label">Solutions Given</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">{{ stats().acceptedSolutions }}</span>
+          <span class="stat-label">Accepted Solutions</span>
+        </div>
+        <div class="stat-card civic-score-card">
+          <span class="stat-value civic-value">{{ stats().civicScore }}</span>
+          <span class="stat-label">Civic Score</span>
+          <span class="score-rating" [class]="'rating-' + getScoreRating(stats().civicScore).toLowerCase()">
+            {{ getScoreRating(stats().civicScore) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- ── Two column layout ── -->
+      <div class="profile-grid">
+
+        <!-- Left: Issues + Solutions -->
+        <div class="profile-main">
+
+          <!-- Issues -->
+          <div class="profile-section">
+            <div class="section-header-row">
+              <h2 class="section-title">Issues Reported</h2>
+              <span class="section-count">{{ userIssues().length }}</span>
+            </div>
+
+            @if (userIssues().length === 0) {
+              <div class="empty-card">
+                <span class="empty-icon">📋</span>
+                <p>You haven't reported any issues yet.</p>
+                <a routerLink="/issues/new" class="btn btn-primary btn-sm">Report your first issue</a>
+              </div>
+            } @else {
+              <div class="issue-list">
+                @for (issue of userIssues(); track issue.id) {
+                  <a [routerLink]="['/issues', issue.id]" class="issue-list-item">
+                    <div class="ili-icon">{{ getCategoryIcon(issue.category) }}</div>
+                    <div class="ili-content">
+                      <span class="ili-title">{{ issue.title }}</span>
+                      <span class="ili-meta">{{ issue.location }}</span>
+                    </div>
+                    <div class="ili-right">
+                      <span class="ili-badge" [class]="getStatusColor(issue.status)">{{ getStatusLabel(issue.status) }}</span>
+                      <span class="ili-votes">▲ {{ issue.vote_count }}</span>
+                    </div>
+                  </a>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Solutions -->
+          <div class="profile-section">
+            <div class="section-header-row">
+              <h2 class="section-title">Solutions Proposed</h2>
+              <span class="section-count">{{ userSolutions().length }}</span>
+            </div>
+
+            @if (userSolutions().length === 0) {
+              <div class="empty-card">
+                <span class="empty-icon">💡</span>
+                <p>You haven't proposed any solutions yet. Browse issues and help your community!</p>
+                <a routerLink="/feed" class="btn btn-secondary btn-sm">Browse Issues</a>
+              </div>
+            } @else {
+              <div class="solution-list">
+                @for (sol of userSolutions(); track sol.id) {
+                  <div class="solution-list-item" [class.accepted]="sol.is_accepted">
+                    @if (sol.is_accepted) {
+                      <div class="accepted-badge">✅ Accepted</div>
+                    }
+                    <p class="sol-text">{{ sol.solution_text }}</p>
+                    <div class="sol-meta">
+                      <span>Issue #{{ sol.issue_id }}</span>
+                      <span>▲ {{ sol.upvotes }} upvotes</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+        </div>
+
+        <!-- Right: Badges + Score breakdown -->
+        <div class="profile-sidebar">
+
+          <!-- Civic Score card -->
+          <div class="score-panel">
+            <h3 class="score-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Civic Score
+            </h3>
+            <div class="score-big">{{ stats().civicScore }}</div>
+            <div class="score-breakdown">
+              <div class="score-row">
+                <span>Issues posted</span>
+                <span>{{ stats().issuesPosted }} × 10 = <strong>{{ stats().issuesPosted * 10 }}</strong></span>
+              </div>
+              <div class="score-row">
+                <span>Solutions given</span>
+                <span>{{ stats().solutionsGiven }} × 5 = <strong>{{ stats().solutionsGiven * 5 }}</strong></span>
+              </div>
+              <div class="score-row">
+                <span>Accepted solutions</span>
+                <span>{{ stats().acceptedSolutions }} × 20 = <strong>{{ stats().acceptedSolutions * 20 }}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Badges -->
+          <div class="badges-panel">
+            <h3 class="badges-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+              Badges
+            </h3>
+
+            @if (earnedBadges().length > 0) {
+              <p class="badges-sub">Earned</p>
+              <div class="badges-grid">
+                @for (badge of earnedBadges(); track badge.id) {
+                  <div class="badge-item earned" [title]="badge.description">
+                    <span class="badge-icon">{{ badge.icon }}</span>
+                    <span class="badge-label">{{ badge.label }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (pendingBadges().length > 0) {
+              <p class="badges-sub locked">Locked</p>
+              <div class="badges-grid">
+                @for (badge of pendingBadges(); track badge.id) {
+                  <div class="badge-item locked" [title]="badge.description">
+                    <span class="badge-icon">🔒</span>
+                    <span class="badge-label">{{ badge.label }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+        </div>
+      </div>
+      } <!-- end loading -->
+    </div>
+  </div>
+
+} @else {
+  <!-- Not logged in -->
+  <div class="not-logged-in">
+    <div class="nli-card">
+      <div class="nli-icon">🔐</div>
+      <h2>You need to be logged in</h2>
+      <p>Please sign in to view your profile.</p>
+      <a routerLink="/login" class="btn btn-primary btn-lg">Log in</a>
+    </div>
+  </div>
+}

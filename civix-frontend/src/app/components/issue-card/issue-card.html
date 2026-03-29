@@ -1,0 +1,62 @@
+<a [routerLink]="['/issues', issue.id]" class="card" [id]="'issue-card-' + issue.id">
+
+  <!-- Image / Placeholder -->
+  @if (issue.image_url) {
+    <div class="card-image">
+      <img [src]="issue.image_url" [alt]="issue.title" loading="lazy" />
+    </div>
+  } @else {
+    <div class="card-image card-image-placeholder">
+      <span class="placeholder-icon">{{ categoryIcon }}</span>
+    </div>
+  }
+
+  <!-- Body -->
+  <div class="card-body">
+
+    <!-- Category + Status row -->
+    <div class="card-meta">
+      <span class="card-category">{{ categoryIcon }} {{ categoryLabel }}</span>
+      <app-status-badge [status]="issue.status"></app-status-badge>
+    </div>
+
+    <h3 class="card-title">{{ issue.title }}</h3>
+    <p class="card-description">{{ issue.description }}</p>
+
+    <!-- Footer: location | votes | time -->
+    <div class="card-footer">
+      <div class="card-location">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span>{{ issue.location }}</span>
+      </div>
+
+      <div class="card-vote-row">
+        <!-- Upvote -->
+        <button
+          class="vote-btn vote-up"
+          [class.active]="issue.user_vote === 'up'"
+          (click)="onUpvote($event)"
+          [id]="'upvote-' + issue.id"
+          aria-label="Upvote"
+          title="Confirm this issue is real">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><polyline points="5 12 12 5 19 12"/></svg>
+          <span class="vote-count" [class.positive]="issue.vote_count > 0" [class.negative]="issue.vote_count < 0">{{ issue.vote_count }}</span>
+        </button>
+
+        <!-- Downvote -->
+        <button
+          class="vote-btn vote-down"
+          [class.active]="issue.user_vote === 'down'"
+          (click)="onDownvote($event)"
+          [id]="'downvote-' + issue.id"
+          aria-label="Downvote"
+          title="Mark as spam or irrelevant">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><polyline points="19 12 12 19 5 12"/></svg>
+        </button>
+
+        <span class="card-time">{{ timeAgo }}</span>
+      </div>
+    </div>
+
+  </div>
+</a>
