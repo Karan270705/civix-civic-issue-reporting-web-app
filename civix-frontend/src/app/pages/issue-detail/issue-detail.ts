@@ -41,6 +41,7 @@ export class IssueDetail implements OnInit, OnDestroy {
   solutionLoading = signal(false);
   commentLoading  = signal(false);
   voteLoading     = signal(false);
+  statusLoading   = signal(false);
   solutionVoting  = signal<number | null>(null); // id of solution being voted
 
   // ── Forms ─────────────────────────────────────────────────────────────────
@@ -135,6 +136,24 @@ export class IssueDetail implements OnInit, OnDestroy {
     const user  = this.authService.currentUser;
     const issue = this.issue();
     return !!(user && issue && user.id === issue.created_by);
+  }
+
+  // ── Update issue status ───────────────────────────────────────────────
+  updateStatus(status: string): void {
+    const issue = this.issue();
+    if (!issue || this.statusLoading() || !this.isIssueOwner()) return;
+    if (issue.status === status) return;
+
+    this.statusLoading.set(true);
+    this.issueSvc.updateStatus(issue.id, status as any).subscribe({
+      next: (updated) => {
+        this.issue.set(updated);
+        this.statusLoading.set(false);
+      },
+      error: () => {
+        this.statusLoading.set(false);
+      }
+    });
   }
 
   // ── Add solution ──────────────────────────────────────────────────────────

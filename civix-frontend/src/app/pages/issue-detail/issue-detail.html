@@ -273,7 +273,14 @@
           <h3 class="sidebar-card-title">Resolution Status</h3>
           <div class="status-steps">
             @for (step of statusSteps; track step.key; let i = $index) {
-              <div class="status-step" [class.done]="i < statusIndex()" [class.current]="i === statusIndex()">
+              <div
+                class="status-step"
+                [class.done]="i < statusIndex()"
+                [class.current]="i === statusIndex()"
+                [class.clickable]="isIssueOwner() && i !== statusIndex() && !statusLoading()"
+                (click)="isIssueOwner() && i !== statusIndex() ? updateStatus(step.key) : null"
+                [id]="'status-step-' + step.key"
+              >
                 <div class="step-indicator">
                   @if (i < statusIndex()) {
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -290,6 +297,14 @@
               }
             }
           </div>
+          @if (isIssueOwner()) {
+            <p class="status-hint">Click a status to update</p>
+          }
+          @if (statusLoading()) {
+            <div class="status-updating">
+              <span class="btn-spinner"></span> Updating…
+            </div>
+          }
         </div>
 
         <!-- Quick stats -->
